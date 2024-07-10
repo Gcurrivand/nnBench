@@ -1,5 +1,6 @@
 from PIL import Image
 import os
+import numpy as np
 
 def binarize_image(input_path, output_path, threshold=128):
     with Image.open(input_path) as img:
@@ -12,10 +13,7 @@ def binarize_image(input_path, output_path, threshold=128):
 def binarize_folder(input_folder, output_folder, threshold=128): 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
-    # List of common image file extensions
-    image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff']
-    
-    # Process each file in the input folder
+    image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff']  
     for filename in os.listdir(input_folder):
         if any(filename.lower().endswith(ext) for ext in image_extensions):
             input_path = os.path.join(input_folder, filename)
@@ -27,15 +25,17 @@ def binarize_folder(input_folder, output_folder, threshold=128):
             except Exception as e:
                 print(f"Error processing {filename}: {str(e)}")
 
-def image_to_bw_array(image_path, threshold=128):
-    # Open the image and convert it to grayscale
+def bw_image_to_2d_array(image_path, threshold=128):
     with Image.open(image_path) as img:
         img_gray = img.convert('L')
-    
-    # Convert the image to a numpy array
     img_array = np.array(img_gray)
-    
-    # Create an array where 1 represents black (below or equal to threshold), 0 represents white
     bw_array = (img_array <= threshold).astype(int)
-    
     return bw_array
+
+def bw_image_to_1d_array(image_path, threshold=128):
+    img = Image.open(image_path).convert('L')
+    width, height = img.size
+    result = np.zeros(width * height, dtype=np.int8)
+    for i, pixel in enumerate(img.getdata()):
+        result[i] = 1 if pixel < threshold else 0
+    return result

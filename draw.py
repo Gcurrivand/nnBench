@@ -37,7 +37,7 @@ font = pygame.font.Font(None, 24)
 STOP_DRAWING_EVENT = pygame.USEREVENT + 1
 # Timer variables
 drawing_timer = None
-DRAWING_TIMEOUT = 2000
+DRAWING_TIMEOUT = 500
 # Flag to track if drawing has stopped
 drawing_stopped = False
 
@@ -160,7 +160,7 @@ while True:
                 drawing = False
                 last_pos = None
         elif event.type == STOP_DRAWING_EVENT and not drawing_stopped:
-            print("Stopped drawing for 3 seconds")
+            print("Stopped drawing for 1/2 seconds")
             save_image_and_meaning()
             drawing_stopped = True
             stop_drawing_timer()

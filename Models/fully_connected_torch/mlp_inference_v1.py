@@ -1,29 +1,43 @@
 import torch
+import numpy as np
 import os
 import sys
 from MLP import MLP_V1
-
 package_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 sys.path.insert(0, package_path)
-from data_package import bw_image_to_1d_array
+from data_package import mnist_load
 
-def prepare_input(image_path):
-    image_array = bw_image_to_1d_array(image_path)
-    image_tensor = torch.tensor(image_array, dtype=torch.float32).unsqueeze(0)
-    return image_tensor
+# Define input size and learning rate (must match the training settings)
+input_size = 28
+learning_rate = 0.05
 
-def run_inference(image_path):
-    model = MLP_V1().to("cpu")
-    model.eval()
-    with torch.no_grad():
-        input_tensor = prepare_input(image_path)
-        output = model(input_tensor)
-        probabilities = torch.nn.functional.softmax(output, dim=1)
-        _, predicted = torch.max(output.data, 1)
-        return predicted.item(), probabilities.squeeze().tolist()
+# Initialize the model
+model = MLP_V1(input_size, learning_rate)
 
-if __name__ == '__main__':
-    test_image_path = "./Dataset/NumbersFC/binarized_drawing_21.png"
-    predicted_class, class_probabilities = run_inference(test_image_path)
-    print(f"Predicted class: {predicted_class}")
-    print(f"Class probabilities: {class_probabilities}")
+# Load the model weights
+model_path = "mlp_v1_weights.pth"
+model.load_state_dict(torch.load(model_path))
+
+# Set the model to evaluation mode
+model.eval()
+
+# Load the test data
+(x_test, y_test) = mnist_load()[1]
+
+# Convert test data to numpy arrays and then to PyTorch tensors
+x_test = np.array(x_test)
+y_test = np.array(y_test)
+
+x_test = torch.tensor(x_test, dtype=torch.float32)
+y_test = torch.tensor(y_test, dtype=torch.float32)
+
+# No need for gradients during inference
+with torch.no_grad():
+    predictions = model(x_test).squeeze(1)  # Squeeze to match label shape if necessary
+
+# If you need to round the predictions (since you used a RoundLayer in the model)
+rounded_predictions = torch.round(predictions)
+
+# Print the predictions and the actual labels for comparison
+for i in range(10):  # Print first 10 predictions as an example
+    print(f'Predicted: {rounded_predictions[i].item()}, Actual: {y_test[i].item()}')

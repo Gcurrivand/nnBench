@@ -84,10 +84,10 @@ def clear_board():
 def save_image_and_meaning():
     global save_count
     save_count += 1
-    filename = f"Dataset/Numbers/drawing_{save_count}.png"
+    filename = f"Dataset_OLD/Numbers/drawing_{save_count}.png"
     pygame.image.save(drawing_surface, filename)
     image = Image.open(filename)
-    resized_image = image.resize((30, 30), Image.LANCZOS)
+    resized_image = image.resize((28, 28), Image.LANCZOS)
     resized_image.save(filename)
 
     # Ask for keyboard input
@@ -112,7 +112,7 @@ def save_image_and_meaning():
         screen.blit(text_surface, (10, 10))
         pygame.display.flip()
     # Save meaning to text file
-    with open(f"Dataset/Meaning/drawing_{save_count}.txt", "w") as f:
+    with open(f"Dataset_OLD/Meaning/drawing_{save_count}.txt", "w") as f:
         f.write(meaning)
     pygame.display.set_caption("Square Drawing with 30x30 Save")
     clear_board()

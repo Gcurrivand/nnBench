@@ -10,7 +10,7 @@ from data_package import mnist_load, MLP_V1
 model = MLP_V1()
 
 # Load the model weights
-best_model_path = os.path.join(os.path.dirname(__file__), "best_mlp_v1_weights.pth")
+model_path = os.path.join(os.path.dirname(__file__), "best_mlp_v1_weights.pth")
 model.load_state_dict(torch.load(model_path))
 
 # Set the model to evaluation mode

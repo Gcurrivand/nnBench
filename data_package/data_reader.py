@@ -31,15 +31,17 @@ def read_labels(folder_path):
                 contents.append(f"Error reading file {filename}: {str(e)}")
     return np.array(contents, dtype=int)
 
-def create_indicator_array(original_array):
+def create_labels_array(original_array):
     # Ensure the original array is of the correct type and shape
     original_array = np.asarray(original_array, dtype=int)
     if np.any((original_array < 0) | (original_array > 9)):
         raise ValueError("Input must be a 1D array of length 10 with values between 0 and 9")
     result = []
     for value in original_array:
-        new_array = np.zeros(10, dtype=int)
-        new_array[value] = 1
-        result.append(new_array)
-    
+        result.append(create_label_array(value))
     return np.array(result)
+
+def create_label_array(value):
+    new_array = np.zeros(10, dtype=int)
+    new_array[value] = 1
+    return np.array(new_array)

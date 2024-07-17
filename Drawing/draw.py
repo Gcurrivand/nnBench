@@ -1,8 +1,30 @@
 import pygame
 import sys
 import os
+import numpy as np
+import torch
 from PIL import Image
-import re
+package_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
+sys.path.insert(0, package_path)
+from NN import LeNet5, CNN_V1, load_and_prepare_image
+
+
+
+def resize_image(surface):
+    # Convert the pygame surface to a PIL Image
+    pil_string_image = pygame.image.tostring(surface, "RGB", False)
+    pil_image = Image.frombytes("RGB", surface.get_size(), pil_string_image)
+    # Resize the image to 28x28
+    pil_image = pil_image.resize((28, 28), Image.LANCZOS)
+    # Convert to grayscale
+    pil_image = pil_image.convert('L')
+    # Convert to numpy array
+    numpy_image = np.array(pil_image)
+    # Invert the colors (assuming drawing is black on white)
+    numpy_image = 255 - numpy_image
+    # Normalize the values to be between 0 and 1
+    numpy_image = numpy_image / 255.0
+    return numpy_image
 
 # Initialize Pygame
 pygame.init()
@@ -10,11 +32,12 @@ pygame.init()
 # Set up the drawing window
 size = 600
 screen = pygame.display.set_mode((size, size))
-pygame.display.set_caption("Square Drawing with 30x30 Save")
+pygame.display.set_caption("Drawing App with Circular Pen")
 
 # Colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
+GRAY = (100, 100, 100)
 RED = (255, 0, 0)
 
 # Set up the drawing surface
@@ -23,103 +46,82 @@ drawing_surface.fill(WHITE)
 
 # Pen size
 pen_size = 2
-max_pen_size = 20
+min_pen_size = 1
+max_pen_size = 50
 
 # Buttons
-button_width = 90
-button_height = 30
-save_button_rect = pygame.Rect(size - 100, 10, button_width, button_height)
-clear_button_rect = pygame.Rect(size - 100, 50, button_width, button_height)
-button_color = (100, 100, 100)
+button_width, button_height = 90, 30
+save_button = pygame.Rect(size - 100, 10, button_width, button_height)
+clear_button = pygame.Rect(size - 100, 50, button_width, button_height)
 font = pygame.font.Font(None, 24)
 
-# Custom event for stopping drawing
-STOP_DRAWING_EVENT = pygame.USEREVENT + 1
-# Timer variables
-drawing_timer = None
-DRAWING_TIMEOUT = 500
-# Flag to track if drawing has stopped
-drawing_stopped = False
+# Ensure the "Drawings" folder exists
+if not os.path.exists("Drawings"):
+    os.makedirs("Drawings")
 
-# Function to start the drawing timer
-def start_drawing_timer():
-    global drawing_timer, drawing_stopped
-    if drawing_timer:
-        pygame.time.set_timer(drawing_timer, 0)  # Cancel existing timer
-    drawing_timer = pygame.time.set_timer(STOP_DRAWING_EVENT, DRAWING_TIMEOUT)
-    drawing_stopped = False
+def get_next_filename():
+    i = 1
+    while True:
+        filename = f"Drawings/drawing_{i}.png"
+        if not os.path.exists(filename):
+            return filename
+        i += 1
 
-# Function to stop the drawing timer
-def stop_drawing_timer():
-    global drawing_timer
-    if drawing_timer:
-        pygame.time.set_timer(drawing_timer, 0)
-        drawing_timer = None
+hello_button = pygame.Rect(size - 100, 90, button_width, button_height)
+# Add this function to display the "Hello" message:
+def run_inference():
+    model = LeNet5()
+    # Load the model weights
+    model_path = os.path.join(os.path.join(os.path.dirname(__file__),"../Models/CNN/lenet5/best_lenet5_weights.pth"))
+    model.load_state_dict(torch.load(model_path))
+    # Set the model to evaluation mode
+    model.eval()
+    image = load_and_prepare_image(os.path.join(os.path.dirname(__file__), "../Drawings/drawing_1_28x28.png"))
+    image = image.unsqueeze(0)
+    image = image.unsqueeze(0)
+    output = model(image)
+    # If you need to round the predictions (since you used a RoundLayer in the model)
+    prediction = torch.round(output)
+    print(prediction)
 
-# Ensure the folders exist
-folders = ["Dataset", "Dataset/Meaning", "Dataset/Numbers"]
-for folder in folders:
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-
-# Main game loop
-drawing = False
-last_pos = None
-# Function to get the latest save count
-def get_latest_save_count():
-    numbers = []
-    for filename in os.listdir("Dataset/Numbers"):
-        if filename.startswith("drawing_") and filename.endswith(".png"):
-            match = re.search(r'drawing_(\d+)\.png', filename)
-            if match:
-                numbers.append(int(match.group(1)))
-    return max(numbers) if numbers else 0
-
-# Initialize save_count with the latest number
-save_count = get_latest_save_count()
+# Modify the draw_buttons function:
+def draw_buttons():
+    pygame.draw.rect(screen, GRAY, save_button)
+    pygame.draw.rect(screen, GRAY, clear_button)
+    pygame.draw.rect(screen, GRAY, hello_button)
+    save_text = font.render("Save", True, WHITE)
+    clear_text = font.render("Clear", True, WHITE)
+    hello_text = font.render("Run Inference", True, WHITE)
+    screen.blit(save_text, (save_button.x + 10, save_button.y + 5))
+    screen.blit(clear_text, (clear_button.x + 10, clear_button.y + 5))
+    screen.blit(hello_text, (hello_button.x + 10, hello_button.y + 5))
 
 def clear_board():
     drawing_surface.fill(WHITE)
 
-def save_image_and_meaning():
-    global save_count
-    save_count += 1
-    filename = f"Dataset_DRAW/Numbers/drawing_{save_count}.png"
-    pygame.image.save(drawing_surface, filename)
-    image = Image.open(filename)
-    resized_image = image.resize((28, 28), Image.LANCZOS)
-    resized_image.save(filename)
+def save_drawing():
+    filename = get_next_filename()
+    #pygame.image.save(drawing_surface, filename)
+    print(f"Original drawing saved as {filename}")
+    # Resize the image
+    resized_image = resize_image(drawing_surface)
+    # Save the resized image
+    resized_filename = filename.replace('.png', '_28x28.png')
+    Image.fromarray((resized_image * 255).astype(np.uint8)).save(resized_filename)
+    print(f"Resized drawing (28x28) saved as {resized_filename}")
 
-    # Ask for keyboard input
-    pygame.display.set_caption("Enter the meaning of the drawing")
-    meaning = ""
-    input_active = True
-    while input_active:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
-                    input_active = False
-                elif event.key == pygame.K_BACKSPACE:
-                    meaning = meaning[:-1]
-                else:
-                    meaning += event.unicode
-        
-        screen.fill(WHITE)
-        text_surface = font.render(meaning, True, BLACK)
-        screen.blit(text_surface, (10, 10))
-        pygame.display.flip()
-    # Save meaning to text file
-    with open(f"Dataset_DRAW/Meaning/drawing_{save_count}.txt", "w") as f:
-        f.write(meaning)
-    pygame.display.set_caption("Square Drawing with 30x30 Save")
-    clear_board()
+def draw_line(surface, start, end, width):
+    dx = end[0] - start[0]
+    dy = end[1] - start[1]
+    distance = max(abs(dx), abs(dy))
+    for i in range(distance):
+        x = int(start[0] + float(i) / distance * dx)
+        y = int(start[1] + float(i) / distance * dy)
+        pygame.draw.circle(surface, BLACK, (x, y), width // 2)
 
-def is_clicking_button(pos):
-    return save_button_rect.collidepoint(pos) or clear_button_rect.collidepoint(pos)
-
+# Main game loop
+drawing = False
+last_pos = None
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -127,43 +129,28 @@ while True:
             sys.exit()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:  # Left mouse button
-                if save_button_rect.collidepoint(event.pos):
-                    save_image_and_meaning()
-                elif clear_button_rect.collidepoint(event.pos):
+                if save_button.collidepoint(event.pos):
+                    save_drawing()
+                elif clear_button.collidepoint(event.pos):
                     clear_board()
-                elif not is_clicking_button(event.pos):
+                elif hello_button.collidepoint(event.pos):
+                    run_inference()
+                else:
                     drawing = True
                     last_pos = event.pos
-                    stop_drawing_timer()
-                    drawing_stopped = False
-            elif event.button == 4:  # Mouse wheel up
+            elif event.button == 4:  # Scroll up
                 pen_size = min(pen_size + 1, max_pen_size)
-            elif event.button == 5:  # Mouse wheel down
-                pen_size = max(pen_size - 1, 1)
+            elif event.button == 5:  # Scroll down
+                pen_size = max(pen_size - 1, min_pen_size)
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:  # Left mouse button
                 drawing = False
-                last_pos = None
-                if not is_clicking_button(event.pos):
-                    start_drawing_timer()
         elif event.type == pygame.MOUSEMOTION:
-            if drawing and last_pos and not is_clicking_button(event.pos):
+            if drawing:
                 current_pos = event.pos
-                distance = max(abs(current_pos[0] - last_pos[0]), abs(current_pos[1] - last_pos[1]))
-                for i in range(distance):
-                    x = int(last_pos[0] + (current_pos[0] - last_pos[0]) * i / distance)
-                    y = int(last_pos[1] + (current_pos[1] - last_pos[1]) * i / distance)
-                    pygame.draw.circle(drawing_surface, BLACK, (x, y), pen_size)
-                last_pos = event.pos
-                start_drawing_timer()
-            elif drawing and is_clicking_button(event.pos):
-                drawing = False
-                last_pos = None
-        elif event.type == STOP_DRAWING_EVENT and not drawing_stopped:
-            print("Stopped drawing for 1/2 seconds")
-            save_image_and_meaning()
-            drawing_stopped = True
-            stop_drawing_timer()
+                if last_pos:
+                    draw_line(drawing_surface, last_pos, current_pos, pen_size)
+                last_pos = current_pos
 
     # Clear the screen
     screen.fill(WHITE)
@@ -171,18 +158,10 @@ while True:
     # Copy the drawing surface to the main screen
     screen.blit(drawing_surface, (0, 0))
 
-    # Draw the save button
-    pygame.draw.rect(screen, button_color, save_button_rect)
-    save_text = font.render("Save", True, WHITE)
-    screen.blit(save_text, (save_button_rect.x + 10, save_button_rect.y + 5))
+    # Draw buttons
+    draw_buttons()
 
-    # Draw the clear button
-    pygame.draw.rect(screen, button_color, clear_button_rect)
-    clear_text = font.render("Clear", True, WHITE)
-    screen.blit(clear_text, (clear_button_rect.x + 10, clear_button_rect.y + 5))
-
-    # Draw the cursor
-    mouse_pos = pygame.mouse.get_pos()
-    pygame.draw.circle(screen, RED, mouse_pos, pen_size, 1)
+    # Draw the cursor to show current pen size
+    pygame.draw.circle(screen, RED, pygame.mouse.get_pos(), pen_size // 2, 1)
 
     pygame.display.flip()

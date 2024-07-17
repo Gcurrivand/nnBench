@@ -1,13 +1,11 @@
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import os
 import sys
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 package_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 sys.path.insert(0, package_path)
-from data_package import mnist_load, create_labels_array, MLP_V2
+from data_package import mnist_load, create_labels_array, LeNet5
 
 (data, labels), (x_test, y_test) = mnist_load()
 
@@ -16,8 +14,9 @@ data = np.array(data)
 labels = create_labels_array(np.array(labels))
 
 # Convert data to PyTorch tensors
-data = torch.tensor(data, dtype=torch.float32)
+data = torch.tensor(data[ :, np.newaxis, :, :], dtype=torch.float32)
 labels = torch.tensor(labels, dtype=torch.float32)
+print(data.shape)
 
 # Define a custom dataset
 class CustomDataset(Dataset):
@@ -36,12 +35,12 @@ class CustomDataset(Dataset):
 dataset = CustomDataset(data, labels)
 # Ensure the code runs only when the script is executed directly
 if __name__ == '__main__':
-    model = MLP_V2().to("cpu")
+    model = LeNet5().to("cpu")
     dataloader = DataLoader(dataset, model.batch_size, shuffle=True, num_workers=0)
     
     best_loss = float('inf')
-    best_model_path = os.path.join(os.path.dirname(__file__), "best_mlp_v2_weights.pth")
-    num_epochs = 500
+    best_model_path = os.path.join(os.path.dirname(__file__), "best_lenet5_weights.pth")
+    num_epochs = 100
     for epoch in range(num_epochs):
         epoch_loss = 0
         for batch_idx, (data, labels) in enumerate(dataloader):

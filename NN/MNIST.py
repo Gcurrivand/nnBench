@@ -1,8 +1,10 @@
 import numpy as np
+import torch
 import struct
 import os
 from array import array
-from os.path  import join
+from PIL import Image
+
 
 #
 # MNIST Data Loader Class
@@ -51,3 +53,26 @@ def mnist_load():
     test_labels_filepath = os.path.abspath(input_path + '/t10k-labels-idx1-ubyte/t10k-labels-idx1-ubyte')
     mnist_dataloader = MnistDataloader(training_images_filepath, training_labels_filepath, test_images_filepath, test_labels_filepath)
     return mnist_dataloader.load_data()
+
+def create_labels_array(original_array):
+    # Ensure the original array is of the correct type and shape
+    original_array = np.asarray(original_array, dtype=int)
+    if np.any((original_array < 0) | (original_array > 9)):
+        raise ValueError("Input must be a 1D array of length 10 with values between 0 and 9")
+    result = []
+    for value in original_array:
+        result.append(create_label_array(value))
+    return np.array(result)
+
+def create_label_array(value):
+    new_array = np.zeros(10, dtype=int)
+    new_array[value] = 1
+    return np.array(new_array)
+
+def load_and_prepare_image(image_path):
+    image = Image.open(image_path).convert('L')  # Convert to grayscale ('L' mode)
+    if image.size != (28, 28):
+        raise ValueError("Image must be 28x28 in size.")
+    image_array = np.array(image)
+    image_tensor = torch.tensor(image_array, dtype=torch.float32)
+    return image_tensor

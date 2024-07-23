@@ -5,7 +5,7 @@ import numpy as np
 from torch.utils.data import Dataset, DataLoader
 package_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 sys.path.insert(0, package_path)
-from data_package import mnist_load, create_labels_array, CNN_V1
+from NN import mnist_load, create_labels_array, CNN_V1
 
 (data, labels), (x_test, y_test) = mnist_load()
 

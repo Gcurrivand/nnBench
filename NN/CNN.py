@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import os
 
 # https://medium.com/@mitchhuang777/image-recognition-with-cnns-improving-accuracy-and-efficiency-dd347b636e0c
 class CNN_V1(nn.Module):
@@ -10,6 +11,7 @@ class CNN_V1(nn.Module):
         self.batch_size = 3500
         self.lr = 0.1
         self.momentun = 0.9
+        self.name = "v1"
 
         # Hidden layers
         self.cl1 = nn.Conv2d(kernel_size=(5,5),in_channels=1, out_channels=5)
@@ -42,6 +44,7 @@ class LeNet5(nn.Module):
         self.batch_size = 3500
         self.lr = 0.1
         self.momentun = 0.9
+        self.name = "lenet5"
 
         # Hidden layers
         self.cl1 = nn.Conv2d(kernel_size=(3,3), padding=1,in_channels=1, out_channels=6)
@@ -65,3 +68,15 @@ class LeNet5(nn.Module):
         x = F.tanh(self.fc1(x))
         x = F.softmax(self.fc2(x), dim=1)
         return x
+
+def cnn_run_inference(model, image):
+    # Load the model weights
+    model_path = os.path.join(os.path.join(os.path.dirname(__file__),f"../Models/CNN/lenet5/best_{model.name}_weights.pth"))
+    model.load_state_dict(torch.load(model_path))
+    # Set the model to evaluation mode
+    model.eval() 
+    image = image.unsqueeze(0)
+    output = model(image)
+    # If you need to round the predictions (since you used a RoundLayer in the model)
+    prediction = torch.round(output)
+    return prediction

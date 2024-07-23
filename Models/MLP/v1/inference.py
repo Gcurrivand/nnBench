@@ -4,7 +4,7 @@ import os
 import sys
 package_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 sys.path.insert(0, package_path)
-from data_package import mnist_load, MLP_V1
+from NN import mnist_load, MLP_V1
 
 # Initialize the model
 model = MLP_V1()

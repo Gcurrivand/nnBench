@@ -1,9 +1,7 @@
 import numpy as np
-import torch
 import struct
 import os
 from array import array
-from PIL import Image
 
 
 #
@@ -68,11 +66,3 @@ def create_label_array(value):
     new_array = np.zeros(10, dtype=int)
     new_array[value] = 1
     return np.array(new_array)
-
-def load_and_prepare_image(image_path):
-    image = Image.open(image_path).convert('L')  # Convert to grayscale ('L' mode)
-    if image.size != (28, 28):
-        raise ValueError("Image must be 28x28 in size.")
-    image_array = np.array(image)
-    image_tensor = torch.tensor(image_array, dtype=torch.float32)
-    return image_tensor

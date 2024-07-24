@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import os
+from PIL import Image
+import numpy as np
 
 # https://medium.com/@mitchhuang777/image-recognition-with-cnns-improving-accuracy-and-efficiency-dd347b636e0c
 class CNN_V1(nn.Module):
@@ -11,7 +13,7 @@ class CNN_V1(nn.Module):
         self.batch_size = 3500
         self.lr = 0.1
         self.momentun = 0.9
-        self.name = "v1"
+        self.name = "cnn_v1"
 
         # Hidden layers
         self.cl1 = nn.Conv2d(kernel_size=(5,5),in_channels=1, out_channels=5)
@@ -69,14 +71,27 @@ class LeNet5(nn.Module):
         x = F.softmax(self.fc2(x), dim=1)
         return x
 
-def cnn_run_inference(model, image):
-    # Load the model weights
-    model_path = os.path.join(os.path.join(os.path.dirname(__file__),f"../Models/CNN/lenet5/best_{model.name}_weights.pth"))
+def cnn_run_single_inference(model, image):
+    image = load_and_prepare_image(image)
+    model_path = os.path.join(os.path.join(os.path.dirname(__file__),f"../Models/CNN/{model.name}/best_{model.name}_weights.pth"))
     model.load_state_dict(torch.load(model_path))
-    # Set the model to evaluation mode
     model.eval() 
     image = image.unsqueeze(0)
     output = model(image)
-    # If you need to round the predictions (since you used a RoundLayer in the model)
-    prediction = torch.round(output)
+    prediction = torch.argmax(output)
+    print(prediction)
     return prediction
+
+def cnn_run_multiple_inference(model, images):
+    output = model(images)
+    predictions = torch.argmax(output, dim=1)
+    return predictions
+
+def load_and_prepare_image(image_path):
+    image = Image.open(image_path)
+    if image.size != (28, 28):
+        raise ValueError("Image must be 28x28 in size.")
+    image_array = np.array(image)
+    image_tensor = torch.tensor(image_array, dtype=torch.float32)
+    return image_tensor.unsqueeze(0)
+    

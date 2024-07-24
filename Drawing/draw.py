@@ -5,9 +5,9 @@ import numpy as np
 from PIL import Image
 package_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 sys.path.insert(0, package_path)
-from NN import LeNet5, cnn_run_inference
+from NN import LeNet5, CNN_V1,cnn_run_single_inference
 from draw_form import square, line
-from Drawing.pygame_image import pygame_resize_image, pygame_load_and_prepare_image
+from Drawing.pygame_image import pygame_resize_image 
 from OBJD import bruteforce_detection
 
 # Initialize Pygame
@@ -52,19 +52,21 @@ def get_next_filename():
         i += 1
 
 inference_button = pygame.Rect(size - 100, 90, button_width, button_height)
-
-
+detect_button = pygame.Rect(size - 100, 130, button_width, button_height)
 # Modify the draw_buttons function:
 def draw_buttons():
     pygame.draw.rect(screen, GRAY, save_button)
     pygame.draw.rect(screen, GRAY, clear_button)
     pygame.draw.rect(screen, GRAY, inference_button)
+    pygame.draw.rect(screen, GRAY, detect_button)
     save_text = font.render("Save", True, WHITE)
     clear_text = font.render("Clear", True, WHITE)
-    hello_text = font.render("Run Inference", True, WHITE)
+    inference_text = font.render("Run Inference", True, WHITE)
+    hello_text = font.render("Detect", True, WHITE)
     screen.blit(save_text, (save_button.x + 10, save_button.y + 5))
     screen.blit(clear_text, (clear_button.x + 10, clear_button.y + 5))
-    screen.blit(hello_text, (inference_button.x + 10, inference_button.y + 5))
+    screen.blit(inference_text, (inference_button.x + 10, inference_button.y + 5))
+    screen.blit(hello_text, (detect_button.x + 10, detect_button.y + 5))
 
 def clear_board():
     drawing_surface.fill(WHITE)
@@ -95,7 +97,10 @@ while True:
                 elif clear_button.collidepoint(event.pos):
                     clear_board()
                 elif inference_button.collidepoint(event.pos):
-                    print(cnn_run_inference(LeNet5(),pygame_load_and_prepare_image(os.path.join(os.path.dirname(__file__), "../Drawings/drawing_1_28x28.png"))))
+                    save_drawing()
+                    cnn_run_single_inference(CNN_V1(),os.path.join(os.path.dirname(__file__), "../Drawings/drawing_1_28x28.png"))
+                elif detect_button.collidepoint(event.pos):  # Add this block
+                    bruteforce_detection(screen)
                 else:
                     drawing = True
                     last_pos = event.pos

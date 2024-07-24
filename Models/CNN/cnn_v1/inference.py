@@ -4,7 +4,7 @@ import os
 import sys
 package_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 sys.path.insert(0, package_path)
-from NN import mnist_load, create_labels_array, LeNet5, cnn_run_multiple_inference
+from NN import mnist_load, create_labels_array, CNN_V1, cnn_run_multiple_inference
 import matplotlib.pyplot as plt
 
 def show_image_from_array(pixel_array):
@@ -23,7 +23,7 @@ x_test = torch.tensor(x_test[:, np.newaxis, :, :], dtype=torch.float32)
 y_test = torch.tensor(y_test, dtype=torch.float32)
 
 # Load the model once
-model = LeNet5()
+model = CNN_V1()
 model_path = os.path.join(os.path.dirname(__file__), f"best_{model.name}_weights.pth")
 model.load_state_dict(torch.load(model_path))
 model.eval()

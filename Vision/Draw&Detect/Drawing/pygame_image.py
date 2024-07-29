@@ -19,13 +19,17 @@ def pygame_rectangle_extract(surface, x1, y1, x2, y2, filename):
     y1, y2 = min(y1, y2), max(y1, y2)
     width = x2 - x1
     height = y2 - y1
-    rect_surface = pygame.Surface((width, height))
+    rect_surface = pygame.Surface((width, height), pygame.SRCALPHA)
     rect_surface.blit(surface, (0, 0), (x1, y1, width, height))
+    pixel_array = pygame.surfarray.array3d(rect_surface)
+    grayscale = np.dot(pixel_array[...,:3], [0.2989, 0.5870, 0.1140])
+    grayscale_surface = pygame.surfarray.make_surface(grayscale)
     directory = os.path.dirname(filename)
     if directory:
         os.makedirs(directory, exist_ok=True)
-    pygame.image.save(rect_surface, filename)
-    print(f"Image saved as {filename}")
+    
+    pygame.image.save(grayscale_surface, filename)
+    print(f"Grayscale image saved as {filename}")
 
 # Example usage:
 # pygame.init()

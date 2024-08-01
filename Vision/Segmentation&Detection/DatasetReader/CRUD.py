@@ -4,52 +4,68 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import sys
+import pandas as pd
 
 cfp = os.path.join(os.path.dirname(__file__))
 train_path = os.path.join(cfp,f"../Dataset/train")
 valid_path = os.path.join(cfp,f"../Dataset/valid")
 
-def write_line_to_file(filename, param1, param2):
-    with open(filename, 'a') as file:
-        file.write(f"{param1}, {param2};\n")
+def write_line_to_csv(filename, param1, param2):
+    df = pd.DataFrame({'image_path': [param1], 'category_id': [param2]})
+    df.to_csv(filename, mode='a', header=not os.path.exists(filename), index=False)
 
 def create_dataset(base_data, nb_base_images, percentage_train):
-    data_path = os.path.join(cfp,"../Dataset", "Data")
+    data_path = os.path.join(cfp, "../Dataset", "Data")
     os.makedirs(data_path, exist_ok=True)
+
     train_path = os.path.join(data_path, "Train")
     os.makedirs(train_path, exist_ok=True)
-    train_labels_path = os.path.join(train_path,"labels,txt")
-    with open(train_labels_path, 'w') as file:
-        pass
-    print(f"File 'labels.txt' created at {train_labels_path}")
+    train_labels_path = os.path.join(train_path, "data.csv")
+
     valid_path = os.path.join(data_path, "Valid")
     os.makedirs(valid_path, exist_ok=True)
-    valid_labels_path = os.path.join(valid_path,"labels,txt")
-    with open(valid_labels_path, 'w') as file:
-        pass
-    print(f"File 'labels.txt' created at {valid_labels_path}")
+    valid_labels_path = os.path.join(valid_path, "data.csv")
+
+    # Create empty CSV files
+    pd.DataFrame(columns=['image_path', 'category_id']).to_csv(train_labels_path, index=False)
+    print(f"File 'data.csv' created at {train_labels_path}")
+    pd.DataFrame(columns=['image_path', 'category_id']).to_csv(valid_labels_path, index=False)
+    print(f"File 'data.csv' created at {valid_labels_path}")
+
     nb_result_images = 0
-    nb_train_images = percentage_train * nb_base_images
-    for i in range(0,nb_base_images):
+    nb_train_images = int(percentage_train * nb_base_images /100)
+
+    for i in range(nb_base_images):
         image_info, image_path = get_image_info_path(base_data, i)
-        print(image_info)
         subs = create_sub(base_data, i, True)
-        for i, sub in enumerate(subs):
-            if nb_base_images < nb_train_images:
+        for j, sub in enumerate(subs):
+            if i < nb_train_images:
                 save_path = train_path
                 save_label = train_labels_path
             else:
                 save_path = valid_path
                 save_label = valid_labels_path
-            resized = resize_image(base_data, i, (28,28), save=True, upscale=True, keep_aspect_ratio=False,image_path=sub)
+
+            resized = resize_image(base_data, i, (28,28), save=True, upscale=True, keep_aspect_ratio=False, image_path=sub)
             gray = convert_to_grayscale(base_data, i, resized, save=True, dest_path=save_path)
-            write_line_to_file(save_label, gray, image_info['annotations'][i]['category_id'])
+            write_line_to_csv(save_label, gray, image_info['annotations'][j]['category_id'])
             nb_result_images += 1
+        print(str(i)+" sub images are added to data")
 
     print(f"Created {nb_result_images} images from {nb_base_images} in {base_data} Dataset")
 
 def contains_non_int(arr):
     return any(not isinstance(item, int) for item in arr)
+
+def too_small_bbox(arr, treshold):
+    if arr[2] < treshold:
+        return True
+    if  arr[3] < treshold:
+        return True
+    return False
+
+def check_bbox(arr):
+    return contains_non_int(arr) or too_small_bbox(arr, 10)
 
 def get_image_info_path(mode, image_id):
     image_info = j.get_image_info(mode, image_id)
@@ -66,8 +82,8 @@ def read(mode, image_id, bbox=False):
         fig, ax = plt.subplots(1)
         ax.imshow(img)
         if bbox:
-            if contains_non_int(bbox):
-                print("Bbox with non int value dected")
+            if check_bbox(bbox):
+                print("Bbox is wrong")
             for annotation in image_info['annotations']:
                 bbox = annotation['bbox']
                 category_name = annotation['category_name']
@@ -82,8 +98,8 @@ def read(mode, image_id, bbox=False):
         print(f"An error occurred: {e}")
 
 def draw_bbox(mode, image_id, bbox):
-    if contains_non_int(bbox):
-        sys.exit("Bbox has an non int value")
+    if check_bbox(bbox):
+        sys.exit("Bbox is wrong")
     image_info, image_path = get_image_info_path(mode, image_id)
     try:
         img = Image.open(image_path)
@@ -166,8 +182,8 @@ def create_sub(mode, image_id, save=False, path="../Dataset/sub_images"):
         with Image.open(image_path) as img:
             for i, annotation in enumerate(image_info['annotations']):
                 bbox = annotation['bbox']
-                if contains_non_int(bbox):
-                    print("Bbox with non int value dected")
+                if check_bbox(bbox):
+                    print("Bbox is wrong")
                     continue
                 category_name = annotation['category_name']
                 x, y, width, height = bbox

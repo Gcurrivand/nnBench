@@ -7,9 +7,14 @@ import os
 
 nb_classes = 81
 
-def ImageToTensor(path):
+def PathImageToTensor(path):
     transform = transforms.Compose([transforms.PILToTensor()])
     img = Image.open(path)
+    tensor = transform(img)
+    return tensor.float()
+
+def PILImageToTensor(img):
+    transform = transforms.Compose([transforms.PILToTensor()])
     tensor = transform(img)
     return tensor.float()
 
@@ -25,7 +30,7 @@ class CustomDataset(Dataset):
         for i in range(len(datas)):
             image_path = os.path.join(image_dir, datas.iloc[i]["image_path"])
             category_id = datas.iloc[i]["category_id"]
-            self.data.append((ImageToTensor(image_path), category_id))
+            self.data.append((PathImageToTensor(image_path), category_id))
         self.image_dir = image_dir
 
     def __len__(self):

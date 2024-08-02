@@ -12,7 +12,7 @@ valid_path = os.path.join(cfp,f"../Dataset/valid")
 
 def write_line_to_csv(filename, param1, param2):
     df = pd.DataFrame({'image_path': [param1], 'category_id': [param2]})
-    df.to_csv(filename, mode='a', header=not os.path.exists(filename), index=False)
+    df.to_csv(filename, data_origin='a', header=not os.path.exists(filename), index=False)
 
 def create_dataset(base_data, nb_base_images, percentage_train):
     data_path = os.path.join(cfp, "../Dataset", "Data")
@@ -67,16 +67,16 @@ def too_small_bbox(arr, treshold):
 def check_bbox(arr):
     return contains_non_int(arr) or too_small_bbox(arr, 10)
 
-def get_image_info_path(mode, image_id):
-    image_info = j.get_image_info(mode, image_id)
-    if mode == "train":
+def get_image_info_path(data_origin, image_id):
+    image_info = j.get_image_info(data_origin, image_id)
+    if data_origin == "train":
         image_path = os.path.join(train_path, image_info['image']['file_name'])
-    elif mode == "valid":
+    elif data_origin == "valid":
         image_path = os.path.join(valid_path, image_info['image']['file_name'])
     return image_info,image_path
 
-def read(mode, image_id, bbox=False):
-    image_info, image_path = get_image_info_path(mode, image_id)
+def read(data_origin, image_id, bbox=False):
+    image_info, image_path = get_image_info_path(data_origin, image_id)
     try:
         img = Image.open(image_path)
         fig, ax = plt.subplots(1)
@@ -97,10 +97,10 @@ def read(mode, image_id, bbox=False):
     except Exception as e:
         print(f"An error occurred: {e}")
 
-def draw_bbox(mode, image_id, bbox):
+def draw_bbox(data_origin, image_id, bbox):
     if check_bbox(bbox):
         sys.exit("Bbox is wrong")
-    image_info, image_path = get_image_info_path(mode, image_id)
+    image_info, image_path = get_image_info_path(data_origin, image_id)
     try:
         img = Image.open(image_path)
         fig, ax = plt.subplots(1)
@@ -118,11 +118,38 @@ def draw_bbox(mode, image_id, bbox):
     except Exception as e:
         print(f"An error occurred: {e}")
 
-def convert_to_grayscale(mode, image_id, image_path=None, dest_path="../Dataset/grayscaled_images", save=False):
+def show_bbox(data_origin, image_id, bbox):
+    if check_bbox(bbox):
+        sys.exit("Bbox is wrong")
+    image_info, image_path = get_image_info_path(data_origin, image_id)
+    try:
+        img = Image.open(image_path)
+        x, y, width, height = bbox
+        cropped_img = img.crop((x, y, x + width, y + height))
+        plt.imshow(cropped_img)
+        plt.axis('off')
+        plt.show()
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+def get_bbox_pixels(data_origin, image_id, bbox):
+    if check_bbox(bbox):
+        sys.exit("Bbox is wrong")
+    image_info, image_path = get_image_info_path(data_origin, image_id)
+    try:
+        img = Image.open(image_path)
+        x, y, width, height = bbox
+        cropped_img = img.crop((x, y, x + width, y + height))
+        return cropped_img
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
+def convert_to_grayscale(data_origin, image_id, image_path=None, dest_path="../Dataset/grayscaled_images", save=False):
     dest_dir = os.path.join(cfp,dest_path)
     os.makedirs(dest_dir, exist_ok=True)
     if not image_path:
-        image_info, image_path = get_image_info_path(mode, image_id)
+        image_info, image_path = get_image_info_path(data_origin, image_id)
     try:
         with Image.open(image_path) as img:
             grayscale_img = img.convert('L')
@@ -135,13 +162,13 @@ def convert_to_grayscale(mode, image_id, image_path=None, dest_path="../Dataset/
         print(f"An error occurred: {e}")
         return None
 
-def resize_image(mode, image_id, target_size, keep_aspect_ratio=True, upscale=False, save=False, dest_path="../Dataset/resized_images", image_path=None):
+def resize_image(data_origin, image_id, target_size, keep_aspect_ratio=True, upscale=False, save=False, dest_path="../Dataset/resized_images", image_path=None):
     dest_dir = os.path.join(cfp,dest_path)
     os.makedirs(dest_dir, exist_ok=True)
     if not image_path:
-        image_info, image_path = get_image_info_path(mode, image_id)
+        image_info, image_path = get_image_info_path(data_origin, image_id)
     with Image.open(image_path) as img:
-        if img.mode == 'P':
+        if img.data_origin == 'P':
             img = img.convert('RGB')
 
         original_width, original_height = img.size
@@ -174,8 +201,8 @@ def resize_image(mode, image_id, target_size, keep_aspect_ratio=True, upscale=Fa
                 resized_img.save(save_path)
             return save_path
 
-def create_sub(mode, image_id, save=False, path="../Dataset/sub_images"):
-    image_info, image_path = get_image_info_path(mode, image_id)
+def create_sub(data_origin, image_id, save=False, path="../Dataset/sub_images"):
+    image_info, image_path = get_image_info_path(data_origin, image_id)
     saved_images = []
     
     try:

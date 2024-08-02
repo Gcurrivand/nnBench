@@ -5,8 +5,7 @@ import os
 import sys
 package_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 sys.path.insert(0, package_path)
-from DatasetReader import CustomDataset, ImageToTensor
-from PIL import Image
+from DatasetReader import CustomDataset, PathImageToTensor, PILImageToTensor
 from torch.utils.data import DataLoader
 
 cfp = os.path.join(os.path.dirname(__file__))
@@ -32,31 +31,33 @@ class LeNet5(nn.Module):
         self.criterion = nn.CrossEntropyLoss()
         
     def forward(self, x):
+        print(x.shape)
         x = F.tanh(self.cl1(x))
-        print(x.shape)
         x = F.tanh(self.avgp(x))
-        print(x.shape)
         x = F.tanh(self.cl2(x))
-        print(x.shape)
         x = F.tanh(self.avgp(x))
-        print(x.shape)
         x = F.tanh(self.cl3(x))
-        print(x.shape)
         x = self.flatten(x)
-        x = x.squeeze(1)
-        print(x.shape)
         x = F.tanh(self.fc1(x))
-        x = F.tanh(self.fc2(x))
+        x = F.softmax(self.fc2(x), dim=1)
         return x
 
-def cnn_run_single_inference(model, img_path, weights_path="./Weights/best_lenet5_weights.pth"):
-    tensor_input = ImageToTensor(img_path)
+def compute_inference(model, tensor_input, weights_path="./Weights/best_lenet5_weights.pth"):
     model.load_state_dict(torch.load(os.path.join(cfp,weights_path)))
     model.eval() 
     output = model(tensor_input)
+    print(output)
     prediction = torch.argmax(output)
     print(prediction)
     return prediction
+
+def cnn_run_single_inference_image_path(model, img_path, weights_path="./Weights/best_lenet5_weights.pth"):
+    tensor_input = PathImageToTensor(img_path).unsqueeze(0)
+    return compute_inference(model, tensor_input, weights_path)
+
+def cnn_run_single_inference_image_pil(model, img, weights_path="./Weights/best_lenet5_weights.pth"):
+    tensor_input = PILImageToTensor(img).unsqueeze(0)
+    return compute_inference(model, tensor_input, weights_path)
 
 def cnn_run_multiple_inference(model, images):
     output = model(images)
@@ -66,7 +67,7 @@ def cnn_run_multiple_inference(model, images):
 def train(model, nb_epochs, batch_size, data_path="../Dataset/Data/Train", weights_path="./Weights/best_lenet5_weights.pth"):
     print("Data are processed")
     train_data = CustomDataset(os.path.join(cfp,data_path,"data.csv"), os.path.join(cfp,data_path))
-    dataloader = DataLoader(train_data, batch_size, shuffle=True, num_workers=1)
+    dataloader = DataLoader(train_data, batch_size, shuffle=True, num_workers=0)
     print("Data processed")
     best_loss = float('inf')
     best_model_path = os.path.join(os.path.dirname(__file__), weights_path)

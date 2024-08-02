@@ -5,7 +5,7 @@ import os
 import sys
 package_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 sys.path.insert(0, package_path)
-from NN import LeNet5, train, cnn_run_single_inference
+from NN import LeNet5, train, cnn_run_single_inference_image_path
 
 
 cfp = os.path.join(os.path.dirname(__file__))
@@ -16,8 +16,9 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
     
     # Your existing code here
-    #train(LeNet5().to("cpu"), 100, 3000)
-    cnn_run_single_inference(LeNet5().to("cpu"),os.path.join(cfp,"../Dataset/Data/Valid/gray_4084_resized_4084_person_6.png"))
+    #train(LeNet5().to("cpu"), 20, 10000)
+    image_name = "gray_28508_resized_28508_cat_0.png"
+    cnn_run_single_inference_image_path(LeNet5().to("cpu"),os.path.join(cfp,"../Dataset/Data/Valid",image_name))
 
 #print(get_image_info("train", 96))
 #subs = create_sub("train", 96, True)
@@ -31,6 +32,6 @@ if __name__ == '__main__':
 #       resized = resize_image("train", i, (60,60), save=True, upscale=True, keep_aspect_ratio=False,image_path=sub)
 #       convert_to_grayscale("train", i, resized, save=True)
 #start = time.time()
-#create_dataset("train", 5000, 80)
+#create_dataset("train", 30000, 95)
 #end = time.time()
 #print(end-start)

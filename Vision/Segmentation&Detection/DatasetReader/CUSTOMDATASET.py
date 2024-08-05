@@ -4,19 +4,23 @@ from torchvision import transforms
 from PIL import Image
 import torch
 import os
+import random
 
 nb_classes = 81
 
-def PathImageToTensor(path):
-    transform = transforms.Compose([transforms.PILToTensor()])
+def validate_selection(probability):
+    return random.random() < probability
+
+def PathImageToTensor(path, normalize=False):
+    transform = transforms.Compose([transforms.PILToTensor()]) if normalize else transforms.Compose([transforms.PILToTensor(),transforms.Lambda(lambda x: x.float() / 255.0)])
     img = Image.open(path)
     tensor = transform(img)
     return tensor.float()
 
-def PILImageToTensor(img):
-    transform = transforms.Compose([transforms.PILToTensor()])
+def PILImageToTensor(img, normalize=False):
+    transform = transforms.Compose([transforms.PILToTensor()]) if normalize else transforms.Compose([transforms.PILToTensor(),transforms.Lambda(lambda x: x.float() / 255.0)])
     tensor = transform(img)
-    return tensor.float()
+    return tensor
 
 def create_tensor_with_index_one(size, index):
     tensor = torch.zeros(size)  
@@ -28,9 +32,12 @@ class CustomDataset(Dataset):
         datas = pd.read_csv(csv_file)
         self.data = []
         for i in range(len(datas)):
-            image_path = os.path.join(image_dir, datas.iloc[i]["image_path"])
             category_id = datas.iloc[i]["category_id"]
-            self.data.append((PathImageToTensor(image_path), category_id))
+            image_path = os.path.join(image_dir, datas.iloc[i]["image_path"])
+            self.data.append((PathImageToTensor(image_path, True), category_id))
+            print(str(i)+"/"+str(len(datas)))
+        print("Data has: "+str(len(self.data))+" entries")
+
         self.image_dir = image_dir
 
     def __len__(self):

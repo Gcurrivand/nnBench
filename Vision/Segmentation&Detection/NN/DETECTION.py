@@ -16,6 +16,7 @@ def create_random_kernels(nb, min_width=30, min_height=30, max_width=300, max_he
                 break
     return np.array(kernels)
 
+# Function has to have a img parameter
 def image_slide_kernel_function(kernel, data_origin,image_id, function, stride_x=1, stride_y=1):
     if not function:
         sys.exit("Function need to be provided to be applied for each iteration of kernel")

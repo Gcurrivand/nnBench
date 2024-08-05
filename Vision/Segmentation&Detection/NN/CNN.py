@@ -19,7 +19,7 @@ class LeNet5(nn.Module):
         self.lr = lr
         self.momentum = momentum
 
-        self.cl1 = nn.Conv2d(kernel_size=(3,3), padding=1,in_channels=1, out_channels=6)
+        self.cl1 = nn.Conv2d(kernel_size=(5,5),in_channels=1, out_channels=6)
         self.avgp = nn.AvgPool2d(kernel_size=(2,2), stride=2)
         self.cl2 = nn.Conv2d(kernel_size=(5,5),in_channels=6, out_channels=16)
         self.cl3 = nn.Conv2d(kernel_size=(5,5),in_channels=16, out_channels=120)
@@ -31,7 +31,6 @@ class LeNet5(nn.Module):
         self.criterion = nn.CrossEntropyLoss()
         
     def forward(self, x):
-        print(x.shape)
         x = F.tanh(self.cl1(x))
         x = F.tanh(self.avgp(x))
         x = F.tanh(self.cl2(x))
@@ -41,8 +40,39 @@ class LeNet5(nn.Module):
         x = F.tanh(self.fc1(x))
         x = F.softmax(self.fc2(x), dim=1)
         return x
+    
+class LeNet5ReluMax(nn.Module):
+    def __init__(self, lr= 0.1, momentum= 0.9):
+        super(LeNet5ReluMax, self).__init__()
+        self.name = "lenet5"
+        self.lr = lr
+        self.momentum = momentum
 
-def compute_inference(model, tensor_input, weights_path="./Weights/best_lenet5_weights.pth"):
+        self.cl1 = nn.Conv2d(kernel_size=(5,5),in_channels=1, out_channels=6)
+        self.maxp = nn.MaxPool2d(kernel_size=(2,2), stride=2)
+        self.cl2 = nn.Conv2d(kernel_size=(5,5),in_channels=6, out_channels=16)
+        self.cl3 = nn.Conv2d(kernel_size=(5,5),in_channels=16, out_channels=120)
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(120, 100)
+        self.fc2 = nn.Linear(100, 81)
+        
+        self.optimizer = torch.optim.SGD(self.parameters(), lr=self.lr, momentum=self.momentum)
+        self.criterion = nn.CrossEntropyLoss()
+        
+    def forward(self, x):
+        x = F.relu(self.cl1(x))
+        x = F.relu(self.maxp(x))
+        x = F.relu(self.cl2(x))
+        x = F.relu(self.maxp(x))
+        x = F.relu(self.cl3(x))
+        x = self.flatten(x)
+        x = F.relu(self.fc1(x))
+        x = F.softmax(self.fc2(x), dim=1)
+        return x
+
+def compute_inference(model, tensor_input, weights_path=None):
+    if not weights_path:
+        weights_path = f"./Weights/best_{model.name}_weights.pth"
     model.load_state_dict(torch.load(os.path.join(cfp,weights_path)))
     model.eval() 
     output = model(tensor_input)
@@ -51,11 +81,15 @@ def compute_inference(model, tensor_input, weights_path="./Weights/best_lenet5_w
     print(prediction)
     return prediction
 
-def cnn_run_single_inference_image_path(model, img_path, weights_path="./Weights/best_lenet5_weights.pth"):
+def cnn_run_single_inference_image_path(model, img_path, weights_path=None):
+    if not weights_path:
+        weights_path = f"./Weights/best_{model.name}_weights.pth"
     tensor_input = PathImageToTensor(img_path).unsqueeze(0)
     return compute_inference(model, tensor_input, weights_path)
 
-def cnn_run_single_inference_image_pil(model, img, weights_path="./Weights/best_lenet5_weights.pth"):
+def cnn_run_single_inference_image_pil(model, img, weights_path=None):
+    if not weights_path:
+        weights_path = f"./Weights/best_{model.name}_weights.pth"
     tensor_input = PILImageToTensor(img).unsqueeze(0)
     return compute_inference(model, tensor_input, weights_path)
 
@@ -64,7 +98,9 @@ def cnn_run_multiple_inference(model, images):
     predictions = torch.argmax(output, dim=1)
     return predictions
 
-def train(model, nb_epochs, batch_size, data_path="../Dataset/Data/Train", weights_path="./Weights/best_lenet5_weights.pth"):
+def train(model, nb_epochs, batch_size, weights_path=None, data_path="../Dataset/Data/Train"):
+    if not weights_path:
+        weights_path = f"./Weights/best_{model.name}_weights.pth"
     print("Data are processed")
     train_data = CustomDataset(os.path.join(cfp,data_path,"data.csv"), os.path.join(cfp,data_path))
     dataloader = DataLoader(train_data, batch_size, shuffle=True, num_workers=0)

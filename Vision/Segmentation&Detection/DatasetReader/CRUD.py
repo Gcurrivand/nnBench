@@ -5,14 +5,33 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import sys
 import pandas as pd
+from collections import Counter
+from utils import *
 
 cfp = os.path.join(os.path.dirname(__file__))
 train_path = os.path.join(cfp,f"../Dataset/train")
 valid_path = os.path.join(cfp,f"../Dataset/valid")
 
+def add_count_class_occurrences(path, class_list):
+    class_counts = Counter()
+    for filename in os.listdir(path):
+        filename_parts = filename.split('_')
+        for part in filename_parts:
+            for cla in class_list:
+                if part == cla['name']:
+                    class_counts[cla['name']] += 1
+                    break
+    for name, count in class_counts.items():
+        cla = next((obj for obj in class_list if obj['name'] == name), None)
+        cla['count'] = count
+    for item in class_list:
+        if 'count' not in item:
+            item['count'] = 0
+    return class_list
+
 def write_line_to_csv(filename, param1, param2):
     df = pd.DataFrame({'image_path': [param1], 'category_id': [param2]})
-    df.to_csv(filename, data_origin='a', header=not os.path.exists(filename), index=False)
+    df.to_csv(filename, mode='a', header=not os.path.exists(filename), index=False)
 
 def create_dataset(base_data, nb_base_images, percentage_train):
     data_path = os.path.join(cfp, "../Dataset", "Data")
@@ -46,26 +65,13 @@ def create_dataset(base_data, nb_base_images, percentage_train):
                 save_path = valid_path
                 save_label = valid_labels_path
 
-            resized = resize_image(base_data, i, (28,28), save=True, upscale=True, keep_aspect_ratio=False, image_path=sub)
+            resized = resize_image(base_data, i, (32,32), save=True, upscale=True, keep_aspect_ratio=False, image_path=sub)
             gray = convert_to_grayscale(base_data, i, resized, save=True, dest_path=save_path)
             write_line_to_csv(save_label, gray, image_info['annotations'][j]['category_id'])
             nb_result_images += 1
         print(str(i)+" sub images are added to data")
 
     print(f"Created {nb_result_images} images from {nb_base_images} in {base_data} Dataset")
-
-def contains_non_int(arr):
-    return any(not isinstance(item, int) for item in arr)
-
-def too_small_bbox(arr, treshold):
-    if arr[2] < treshold:
-        return True
-    if  arr[3] < treshold:
-        return True
-    return False
-
-def check_bbox(arr):
-    return contains_non_int(arr) or too_small_bbox(arr, 10)
 
 def get_image_info_path(data_origin, image_id):
     image_info = j.get_image_info(data_origin, image_id)
@@ -168,7 +174,7 @@ def resize_image(data_origin, image_id, target_size, keep_aspect_ratio=True, ups
     if not image_path:
         image_info, image_path = get_image_info_path(data_origin, image_id)
     with Image.open(image_path) as img:
-        if img.data_origin == 'P':
+        if img.mode == 'P':
             img = img.convert('RGB')
 
         original_width, original_height = img.size

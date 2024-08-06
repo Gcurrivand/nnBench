@@ -33,8 +33,10 @@ def write_line_to_csv(filename, param1, param2):
     df = pd.DataFrame({'image_path': [param1], 'category_id': [param2]})
     df.to_csv(filename, mode='a', header=not os.path.exists(filename), index=False)
 
-def create_dataset(base_data, nb_base_images, percentage_train):
-    data_path = os.path.join(cfp, "../Dataset", "Data")
+def create_dataset(base_data, nb_base_images, percentage_train, size=512, name=None, grayscaling=False):
+    if not name:
+        name = f"Data{size}"
+    data_path = os.path.join(cfp, "../Dataset", name)
     os.makedirs(data_path, exist_ok=True)
 
     train_path = os.path.join(data_path, "Train")
@@ -56,19 +58,43 @@ def create_dataset(base_data, nb_base_images, percentage_train):
 
     for i in range(nb_base_images):
         image_info, image_path = get_image_info_path(base_data, i)
-        subs = create_sub(base_data, i, True)
-        for j, sub in enumerate(subs):
-            if i < nb_train_images:
-                save_path = train_path
-                save_label = train_labels_path
-            else:
-                save_path = valid_path
-                save_label = valid_labels_path
+        subs = create_sub(base_data, i, False)
+        if isinstance(subs, tuple):
+            for j, sub in enumerate(subs):
+                if i < nb_train_images:
+                    save_path = train_path
+                    save_label = train_labels_path
+                else:
+                    save_path = valid_path
+                    save_label = valid_labels_path
 
-            resized = resize_image(base_data, i, (32,32), save=True, upscale=True, keep_aspect_ratio=False, image_path=sub)
-            gray = convert_to_grayscale(base_data, i, resized, save=True, dest_path=save_path)
-            write_line_to_csv(save_label, gray, image_info['annotations'][j]['category_id'])
-            nb_result_images += 1
+                if grayscaling: 
+                    resized = resize_image(base_data, i, (size,size), save=False, upscale=True, keep_aspect_ratio=False, img=sub)
+                    gray = convert_to_grayscale(base_data, i, resized, save=True, dest_path=save_path)
+                    write_line_to_csv(save_label, gray, image_info['annotations'][j]['category_id'])
+                    nb_result_images += 1
+                    continue
+                resized = resize_image(base_data, i, (size,size), save=True, upscale=True, keep_aspect_ratio=False, img=sub, dest_path=save_path)
+                write_line_to_csv(save_label, resized, image_info['annotations'][j]['category_id'])
+                nb_result_images += 1
+        else:
+            for j, sub in enumerate(subs):
+                if i < nb_train_images:
+                    save_path = train_path
+                    save_label = train_labels_path
+                else:
+                    save_path = valid_path
+                    save_label = valid_labels_path
+
+                if grayscaling: 
+                    resized = resize_image(base_data, i, (size,size), save=False, upscale=True, keep_aspect_ratio=False, img=sub)
+                    gray = convert_to_grayscale(base_data, i, resized, save=True, dest_path=save_path)
+                    write_line_to_csv(save_label, gray, image_info['annotations'][j]['category_id'])
+                    nb_result_images += 1
+                    continue
+                resized = resize_image(base_data, i, (size,size), save=True, upscale=True, keep_aspect_ratio=False, img=sub, dest_path=save_path)
+                write_line_to_csv(save_label, resized, image_info['annotations'][j]['category_id'])
+                nb_result_images += 1
         print(str(i)+" sub images are added to data")
 
     print(f"Created {nb_result_images} images from {nb_base_images} in {base_data} Dataset")
@@ -168,49 +194,53 @@ def convert_to_grayscale(data_origin, image_id, image_path=None, dest_path="../D
         print(f"An error occurred: {e}")
         return None
 
-def resize_image(data_origin, image_id, target_size, keep_aspect_ratio=True, upscale=False, save=False, dest_path="../Dataset/resized_images", image_path=None):
-    dest_dir = os.path.join(cfp,dest_path)
-    os.makedirs(dest_dir, exist_ok=True)
-    if not image_path:
-        image_info, image_path = get_image_info_path(data_origin, image_id)
-    with Image.open(image_path) as img:
-        if img.mode == 'P':
-            img = img.convert('RGB')
+def resize_image(data_origin, image_id, target_size, keep_aspect_ratio=True, upscale=False, save=False, dest_path="../Dataset/resized_images", image_path=None, img=None):
+    if isinstance(img, tuple):
+        filename = img[1]
+        img = img[0]
+    dest_dir = os.path.join(cfp, dest_path)
+    os.makedirs(dest_dir, exist_ok=True) 
+    if not img:
+        if not image_path:
+            image_info, image_path = get_image_info_path(data_origin, image_id)
+        img = Image.open(image_path)
+    
+    if img.mode == 'P':
+        img = img.convert('RGB')
 
-        original_width, original_height = img.size
-        target_width, target_height = target_size
+    original_width, original_height = img.size
+    target_width, target_height = target_size
 
-        if keep_aspect_ratio:
-            scale = min(target_width / original_width, target_height / original_height)
-            if not upscale:
-                scale = min(scale, 1.0)   
-            new_width = int(original_width * scale)
-            new_height = int(original_height * scale)
-        else:
-            new_width, new_height = target_width, target_height        
-        resized_img = img.resize((new_width, new_height), Image.LANCZOS)
+    if keep_aspect_ratio:
+        scale = min(target_width / original_width, target_height / original_height)
+        if not upscale:
+            scale = min(scale, 1.0)   
+        new_width = int(original_width * scale)
+        new_height = int(original_height * scale)
+    else:
+        new_width, new_height = target_width, target_height        
+    resized_img = img.resize((new_width, new_height), Image.LANCZOS)
 
-        if keep_aspect_ratio:
-            new_img = Image.new('RGB', (target_width, target_height), (255, 255, 255))
-            paste_x = (target_width - new_width) // 2
-            paste_y = (target_height - new_height) // 2
-            new_img.paste(resized_img, (paste_x, paste_y))
-            resized_image_filename = f"{image_id}_resized_{os.path.basename(image_path)}"
-            save_path = os.path.join(dest_dir, resized_image_filename)
-            if save:
-                new_img.save(save_path)
-            return save_path
-        else:
-            resized_image_filename = f"{image_id}_resized_{os.path.basename(image_path)}"
-            save_path = os.path.join(dest_dir, resized_image_filename)
-            if save:
-                resized_img.save(save_path)
-            return save_path
+    if keep_aspect_ratio:
+        new_img = Image.new('RGB', (target_width, target_height), (255, 255, 255))
+        paste_x = (target_width - new_width) // 2
+        paste_y = (target_height - new_height) // 2
+        new_img.paste(resized_img, (paste_x, paste_y))
+        resized_image_filename = f"{image_id}_resized_{os.path.basename(image_path or filename)}"
+        save_path = os.path.join(dest_dir, resized_image_filename)
+        if save:
+            new_img.save(save_path)
+        return save_path
+    else:
+        resized_image_filename = f"{image_id}_resized_{os.path.basename(image_path or filename)}"
+        save_path = os.path.join(dest_dir, resized_image_filename)
+        if save:
+            resized_img.save(save_path)
+        return save_path
 
 def create_sub(data_origin, image_id, save=False, path="../Dataset/sub_images"):
     image_info, image_path = get_image_info_path(data_origin, image_id)
     saved_images = []
-    
     try:
         with Image.open(image_path) as img:
             for i, annotation in enumerate(image_info['annotations']):
@@ -218,20 +248,25 @@ def create_sub(data_origin, image_id, save=False, path="../Dataset/sub_images"):
                 if check_bbox(bbox):
                     print("Bbox is wrong")
                     continue
+                
                 category_name = annotation['category_name']
                 x, y, width, height = bbox
                 img_width, img_height = img.size
+                
                 x = max(0, x)
                 y = max(0, y)
                 right = min(img_width, x + width)
                 bottom = min(img_height, y + height)
                 bbox_image = img.crop((x, y, right, bottom))
-                sub_image_filename = f"{image_id}_{str(category_name).replace(" ","_")}_{i}.png"
-                save_path = os.path.join(cfp,path, sub_image_filename)
-                os.makedirs(os.path.dirname(save_path), exist_ok=True)
+                
                 if save:
+                    sub_image_filename = f"{image_id}_{str(category_name).replace(' ', '_')}_{i}.png"
+                    save_path = os.path.join(path, sub_image_filename)
+                    os.makedirs(os.path.dirname(save_path), exist_ok=True)
                     bbox_image.save(save_path)
-                saved_images.append(save_path)
+                    saved_images.append(save_path)
+                else:
+                    saved_images.append((bbox_image, f"{image_id}_{str(category_name).replace(' ', '_')}_{i}.png"))
         return saved_images
     except Exception as e:
         print(f"An error occurred while extracting and saving the bounding box images: {e}")

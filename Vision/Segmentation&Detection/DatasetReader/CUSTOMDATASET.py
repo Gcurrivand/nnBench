@@ -5,20 +5,28 @@ from PIL import Image
 import torch
 import os
 import random
+from functools import lru_cache
 
 nb_classes = 81
 
 def validate_selection(probability):
     return random.random() < probability
 
+@lru_cache(maxsize=None)
 def PathImageToTensor(path, normalize=False):
-    transform = transforms.Compose([transforms.PILToTensor()]) if normalize else transforms.Compose([transforms.PILToTensor(),transforms.Lambda(lambda x: x.float() / 255.0)])
-    img = Image.open(path)
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) if normalize else lambda x: x
+    ])
+    img = Image.open(path).convert('RGB')
     tensor = transform(img)
-    return tensor.float()
+    return tensor
 
 def PILImageToTensor(img, normalize=False):
-    transform = transforms.Compose([transforms.PILToTensor()]) if normalize else transforms.Compose([transforms.PILToTensor(),transforms.Lambda(lambda x: x.float() / 255.0)])
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) if normalize else lambda x: x
+    ])
     tensor = transform(img)
     return tensor
 
@@ -29,21 +37,16 @@ def create_tensor_with_index_one(size, index):
 
 class CustomDataset(Dataset):
     def __init__(self, csv_file, image_dir):
-        datas = pd.read_csv(csv_file)
-        self.data = []
-        for i in range(len(datas)):
-            category_id = datas.iloc[i]["category_id"]
-            image_path = os.path.join(image_dir, datas.iloc[i]["image_path"])
-            self.data.append((PathImageToTensor(image_path, True), category_id))
-            print(str(i)+"/"+str(len(datas)))
-        print("Data has: "+str(len(self.data))+" entries")
-
+        self.data = pd.read_csv(csv_file)
         self.image_dir = image_dir
+        print(f"Data has: {len(self.data)} entries")
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        tensor_img = self.data[idx][0]
-        class_id = self.data[idx][1]
+        row = self.data.iloc[idx]
+        image_path = os.path.join(self.image_dir, row["image_path"])
+        tensor_img = PathImageToTensor(image_path, True)
+        class_id = row["category_id"]
         return tensor_img, class_id

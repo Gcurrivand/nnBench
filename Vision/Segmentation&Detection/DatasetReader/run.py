@@ -15,8 +15,8 @@ import multiprocessing
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
-    #print(show_bar_graph(add_count_class_occurrences(os.path.join(cfp,"../Dataset/Data/Train"),list_all_categories("train"))))
-    train(ResNet18(81,lr=0.1, momentum=0.9).to("cpu"), 10, 1000,data_path=os.path.join(cfp,"../Dataset/Resnet50/Train"))
+    #print(show_bar_graph(add_count_class_occurrences(os.path.join(cfp,"../Dataset/Resnet50/Train"),list_all_categories("train"))))
+    train(VGG16(lr=0.1, momentum=0.9).to("cpu"), 10, 500,data_path=os.path.join(cfp,"../Dataset/Resnet50/Train"))
     #image_name = "gray_9534_resized_9534_sandwich_0.png"
     #cnn_run_single_inference_image_path(LeNet5().to("cpu"),os.path.join(cfp,"../Dataset/Data/Valid",image_name))
 

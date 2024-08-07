@@ -85,7 +85,6 @@ class ResNet18(nn.Module):
                 nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(out_channels)
             )
-
         layers = []
         layers.append(block(in_channels, out_channels, stride, downsample))
         for _ in range(1, num_blocks):
@@ -106,21 +105,91 @@ class BasicBlock(nn.Module):
 
     def forward(self, x):
         identity = x
-
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
-
         out = self.conv2(out)
         out = self.bn2(out)
-
         if self.downsample is not None:
             identity = self.downsample(x)
-
         out += identity
         out = self.relu(out)
 
         return out
+    
+class VGG16(nn.Module):
+    def __init__(self, lr= 0.1, momentum= 0.9):
+        super(VGG16, self).__init__()
+        self.name = "vgg16"
+        self.lr = lr
+        self.momentum = momentum
+
+        self.relu = nn.ReLU()
+        self.sofm = nn.Softmax(dim=1)
+        self.flat = nn.Flatten()
+        self.layer1 = VGGBlock(3,64)
+        self.layer2 = VGGBlock(64,128)
+        self.layer3 = VGGBlock(128,256,True)
+        self.layer4 = VGGBlock(256,512,True)
+        self.layer5 = VGGBlock(512,512,True)
+        self.fc1 = nn.Linear(25088,4096)
+        self.fc2 = nn.Linear(4096,81)
+
+        self.optimizer = torch.optim.SGD(self.parameters(), lr=self.lr, momentum=self.momentum)
+        self.criterion = nn.CrossEntropyLoss()
+        
+    def forward(self, x):
+        print(x.shape)
+        x = self.layer1(x)
+        print(x.shape)
+        x = self.layer2(x)
+        print(x.shape)
+        x = self.layer3(x)
+        print(x.shape)
+        x = self.layer4(x)
+        print(x.shape)
+        x = self.layer5(x)
+        print(x.shape)
+        x = self.flat(x)
+        print(x.shape)
+        x = self.fc1(x)
+        print(x.shape)
+        x = self.relu(x)
+        print(x.shape)
+        x = self.fc2(x)
+        print(x.shape)
+        x = self.relu(x)
+        print(x.shape)
+        x = self.sofm(x)
+        return x
+    
+class VGGBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, lastconv=False):
+        super(VGGBlock, self).__init__()
+        self.lastconv = lastconv
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3,padding=1)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
+        self.maxp1 = nn.MaxPool2d(2)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        print("VGG")
+        print(x.shape)
+        x = self.conv1(x)
+        print(x.shape)
+        x = self.relu(x)
+        print(x.shape)
+        x = self.conv2(x)
+        print(x.shape)
+        if self.lastconv:
+            x = self.conv2(x)
+        print(x.shape)
+        x = self.relu(x)
+        print(x.shape)
+        x = self.maxp1(x)
+        print(x.shape)
+        return x
+    
 
 
 def compute_inference(model, tensor_input, weights_path=None):

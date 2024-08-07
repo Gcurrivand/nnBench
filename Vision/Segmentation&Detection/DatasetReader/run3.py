@@ -18,16 +18,18 @@ def validate_selection(probability):
 
 """ if __name__ == '__main__':
     multiprocessing.freeze_support()
+
+    dataname = "Resnet50"
     
-    datas = pd.read_csv(os.path.join(cfp, "../Dataset/Data/Train", "data.csv"))
+    datas = pd.read_csv(os.path.join(cfp, f"../Dataset/{dataname}/Train", "data.csv"))
     rows_to_remove = []
     print(len(datas))
     for i in range(len(datas)):
         category_id = datas.iloc[i]["category_id"]
-        image_path = os.path.join(os.path.join(cfp, "../Dataset/Data/Train"), datas.iloc[i]["image_path"])
+        image_path = os.path.join(os.path.join(cfp, f"../Dataset/{dataname}/Train"), datas.iloc[i]["image_path"])
         should_delete = False
         
-        if category_id == 19 or category_id == 23:
+        if category_id == 19:
            should_delete = validate_selection(1/2)
         
         if should_delete:
@@ -42,7 +44,7 @@ def validate_selection(probability):
     datas = datas.drop(datas.index[rows_to_remove])
 
     # Save the updated DataFrame back to the CSV file
-    datas.to_csv(os.path.join(cfp, "../Dataset/Data/Train", "data.csv"), index=False) """
+    datas.to_csv(os.path.join(cfp, f"../Dataset/{dataname}/Train", "data.csv"), index=False) """
     
     
 

@@ -192,7 +192,7 @@ class VGGBlock(nn.Module):
     
 
 
-def compute_inference(model, tensor_input, weights_path=None):
+def cnn_compute_inference(model, tensor_input, weights_path=None):
     if not weights_path:
         weights_path = f"./Weights/best_{model.name}_weights.pth"
     model.load_state_dict(torch.load(os.path.join(cfp,weights_path)))
@@ -207,13 +207,13 @@ def cnn_run_single_inference_image_path(model, img_path, weights_path=None):
     if not weights_path:
         weights_path = f"./Weights/best_{model.name}_weights.pth"
     tensor_input = PathImageToTensor(img_path).unsqueeze(0)
-    return compute_inference(model, tensor_input, weights_path)
+    return cnn_compute_inference(model, tensor_input, weights_path)
 
 def cnn_run_single_inference_image_pil(model, img, weights_path=None):
     if not weights_path:
         weights_path = f"./Weights/best_{model.name}_weights.pth"
     tensor_input = PILImageToTensor(img).unsqueeze(0)
-    return compute_inference(model, tensor_input, weights_path)
+    return cnn_compute_inference(model, tensor_input, weights_path)
 
 def cnn_run_multiple_inference(model, images):
     output = model(images)

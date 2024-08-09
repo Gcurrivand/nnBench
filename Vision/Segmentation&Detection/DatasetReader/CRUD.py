@@ -129,8 +129,8 @@ def read(data_origin, image_id, bbox=False):
     except Exception as e:
         print(f"An error occurred: {e}")
 
-def draw_bbox(data_origin, image_id, bbox):
-    if check_bbox(bbox):
+def draw_bbox(data_origin, image_id, bbox, color='r'):
+    if not check_bbox(bbox):
         sys.exit("Bbox is wrong")
     image_info, image_path = get_image_info_path(data_origin, image_id)
     try:
@@ -141,8 +141,8 @@ def draw_bbox(data_origin, image_id, bbox):
         # Unpack the bbox coordinates
         x, y, width, height = bbox
         
-        # Create and add the rectangle
-        rect = patches.Rectangle((x, y), width, height, linewidth=2, edgecolor='r', facecolor='none')
+        # Create and add the rectangle with the specified color
+        rect = patches.Rectangle((x, y), width, height, linewidth=2, edgecolor=color, facecolor='none')
         ax.add_patch(rect)
         
         plt.axis('off')  
@@ -150,9 +150,28 @@ def draw_bbox(data_origin, image_id, bbox):
     except Exception as e:
         print(f"An error occurred: {e}")
 
+def draw_bboxes(data_origin, image_id, bboxes, img=None, color='r'):    
+    image_info, image_path = get_image_info_path(data_origin, image_id)
+    try:
+        if not img:
+            img = Image.open(image_path)
+        fig, ax = plt.subplots(1)
+        ax.imshow(img)
+        
+        for bbox in bboxes:
+            # Unpack the bbox coordinates
+            x, y, width, height = bbox
+            
+            # Create and add the rectangle with the specified color
+            rect = patches.Rectangle((x, y), width, height, linewidth=2, edgecolor=color, facecolor='none')
+            ax.add_patch(rect)
+        
+        plt.axis('off')  
+        plt.show()
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
 def show_bbox(data_origin, image_id, bbox):
-    if check_bbox(bbox):
-        sys.exit("Bbox is wrong")
     image_info, image_path = get_image_info_path(data_origin, image_id)
     try:
         img = Image.open(image_path)
@@ -194,7 +213,8 @@ def convert_to_grayscale(data_origin, image_id, image_path=None, dest_path="../D
         print(f"An error occurred: {e}")
         return None
 
-def resize_image(data_origin, image_id, target_size, keep_aspect_ratio=True, upscale=False, save=False, dest_path="../Dataset/resized_images", image_path=None, img=None):
+
+def resize_image(target_size, data_origin=None , image_id=None, save=False, dest_path="../Dataset/resized_images", image_path=None, img=None, ratio=None):
     if isinstance(img, tuple):
         filename = img[1]
         img = img[0]
@@ -204,39 +224,19 @@ def resize_image(data_origin, image_id, target_size, keep_aspect_ratio=True, ups
         if not image_path:
             image_info, image_path = get_image_info_path(data_origin, image_id)
         img = Image.open(image_path)
+        print(img)
     
     if img.mode == 'P':
         img = img.convert('RGB')
 
-    original_width, original_height = img.size
-    target_width, target_height = target_size
-
-    if keep_aspect_ratio:
-        scale = min(target_width / original_width, target_height / original_height)
-        if not upscale:
-            scale = min(scale, 1.0)   
-        new_width = int(original_width * scale)
-        new_height = int(original_height * scale)
-    else:
-        new_width, new_height = target_width, target_height        
-    resized_img = img.resize((new_width, new_height), Image.LANCZOS)
-
-    if keep_aspect_ratio:
-        new_img = Image.new('RGB', (target_width, target_height), (255, 255, 255))
-        paste_x = (target_width - new_width) // 2
-        paste_y = (target_height - new_height) // 2
-        new_img.paste(resized_img, (paste_x, paste_y))
-        resized_image_filename = f"{image_id}_resized_{os.path.basename(image_path or filename)}"
-        save_path = os.path.join(dest_dir, resized_image_filename)
-        if save:
-            new_img.save(save_path)
+    target_width, target_height = target_size       
+    resized_img = img.resize((target_width, target_height), Image.LANCZOS)
+    resized_image_filename = f"{image_id}_resized_{os.path.basename(image_path or filename)}"
+    save_path = os.path.join(dest_dir, resized_image_filename)
+    if save:
+        resized_img.save(save_path)
         return save_path
-    else:
-        resized_image_filename = f"{image_id}_resized_{os.path.basename(image_path or filename)}"
-        save_path = os.path.join(dest_dir, resized_image_filename)
-        if save:
-            resized_img.save(save_path)
-        return save_path
+    return resized_img
 
 def create_sub(data_origin, image_id, save=False, path="../Dataset/sub_images"):
     image_info, image_path = get_image_info_path(data_origin, image_id)
